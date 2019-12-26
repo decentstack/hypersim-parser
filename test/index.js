@@ -1,6 +1,102 @@
 const test = require('tape')
-const { BasicTimeline, TimelineAggregator } = require('..')
+const { Parser, BasicTimeline, TimelineAggregator } = require('..')
 const fs = require('fs')
+
+const testChunks = [
+  '{"iteration":0,"msg":"He',
+  'llo"}\n{"iteration":1,"m',
+  'sg":"world"}\n{"iteration":2,"msg":"twice"}\n'
+]
+
+test('ndjson as strings', t => {
+  t.plan(6)
+  const validate = ({ iteration, msg }) => {
+    switch (iteration) {
+      case 0:
+        t.equal(msg, 'Hello', 'pass' + iteration)
+        break
+      case 1:
+        t.equal(msg, 'world', 'pass' + iteration)
+        break
+      case 2:
+        t.equal(msg, 'twice', 'pass' + iteration)
+        break
+      default:
+        t.fail('Unknown state: ' + iteration)
+    }
+  }
+
+  const parser = new Parser({ process: validate })
+
+  const feed = i => {
+    if (i >= testChunks.length) return t.end()
+    const chunk = testChunks[i]
+    parser._write(chunk, err => {
+      t.error(err)
+      feed(i + 1)
+    })
+  }
+  feed(0)
+})
+
+test('ndjson as Buffers', t => {
+  t.plan(6)
+  const validate = ({ iteration, msg }) => {
+    switch (iteration) {
+      case 0:
+        t.equal(msg, 'Hello', 'pass' + iteration)
+        break
+      case 1:
+        t.equal(msg, 'world', 'pass' + iteration)
+        break
+      case 2:
+        t.equal(msg, 'twice', 'pass' + iteration)
+        break
+      default:
+        t.fail('Unknown state: ' + iteration)
+    }
+  }
+
+  const parser = new Parser({ process: validate })
+  const feed = i => {
+    if (i >= testChunks.length) return t.end()
+    const chunk = Buffer.from(testChunks[i])
+    parser._write(chunk, err => {
+      t.error(err)
+      feed(i + 1)
+    })
+  }
+  feed(0)
+})
+
+test('ndjson as Uint8Arrays', t => {
+  t.plan(6)
+  const validate = ({ iteration, msg }) => {
+    switch (iteration) {
+      case 0:
+        t.equal(msg, 'Hello', 'pass' + iteration)
+        break
+      case 1:
+        t.equal(msg, 'world', 'pass' + iteration)
+        break
+      case 2:
+        t.equal(msg, 'twice', 'pass' + iteration)
+        break
+      default:
+        t.fail('Unknown state: ' + iteration)
+    }
+  }
+  const parser = new Parser({ process: validate })
+  const feed = i => {
+    if (i >= testChunks.length) return t.end()
+    const chunk = new Uint8Array(Buffer.from(testChunks[i]))
+    parser._write(chunk, err => {
+      t.error(err)
+      feed(i + 1)
+    })
+  }
+  feed(0)
+})
 
 test.skip('Parser + TimelineAggregator', t => {
   const parser = new TimelineAggregator()

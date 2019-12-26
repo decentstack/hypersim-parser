@@ -3,7 +3,7 @@
 [![Build Status](https://travis-ci.com/decentstack/hypersim-parser.svg?branch=master)](https://travis-ci.com/decentstack/hypersim-parser)
 [![JavaScript Style Guide](https://img.shields.io/badge/code_style-standard-brightgreen.svg)](https://standardjs.com)
 
-> Log parser and metrics aggregator for [hyper-simulator](https://github.com/decentstack/hyper-simulator) output
+> Streaming ndjson parser and metrics aggregator for [hyper-simulator](https://github.com/decentstack/hyper-simulator)
 
 ## <a name="install"></a> Install
 
@@ -35,8 +35,8 @@ parser.once('snapshot', (snapshot, iteration) => {
 parser.once('close', () => console.log('Parsing complete'))
 
 // The parser implements a Writable stream, and accepts
-// either binary streams containing '\n'-separated JSON strings
-// or an object stream either containing serialized JSON or POJOs
+// ndjson in chunks of Buffer | Uint8Array | string
+
 const readable = fs.createReadStream('swarm-log.json')
 readable.pipe(parser)
 ```

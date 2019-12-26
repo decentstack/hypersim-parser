@@ -1,54 +1,88 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 const { Writable } = require('streamx')
 const { omit } = require('lodash')
+
+/**
+ * Fast streaming ndjson parser implementation that uses streamx.
+ */
 class Parser extends Writable {
-  constructor () {
+  /**
+   * Instantiate a new parser
+   * @param opts.objectStream {boolean} bypass binary scanning
+   * @param opts.process {function} alternative process handler
+   */
+  constructor (opts = {}) {
     super()
-    this._rnames = []
-    this._firstWrite = true
-    this._isObjectStream = null
+    if (opts.process) this.process = opts.process
+    this._isObjectStream = opts.isObjectStream
     this._carry = null
   }
 
-  _write (data, cb) {
-    if (this._firstWrite) {
-      this._firstWrite = false
-      this._isObjectStream = !Buffer.isBuffer(data)
+  process (data) {
+    throw new Error('Parser#process() Not Implemented: Please provide' +
+      'the process(data) handler either by extension or as a constructor option')
+  }
+
+  _encode (chunk) {
+    if (typeof chunk === 'string') return chunk
+    else if (typeof Buffer !== 'undefined' && Buffer.isBuffer(chunk)) {
+      return chunk.toString('utf8')
+    } else if (chunk instanceof Uint8Array) {
+      return new TextDecoder().decode(chunk)
+    } else return chunk
+  }
+
+  _concat (chunks) {
+    if (typeof chunks[0] === 'string') return chunks.join('')
+    const nSize = chunks.reduce((s, c) => s + c.length, 0)
+    const buffer = typeof Buffer !== 'undefined'
+      ? Buffer.alloc(nSize)
+      : Uint8Array(nSize)
+    let off = 0
+    for (const chunk of chunks) {
+      let i = 0
+      for (; i < chunk.length; i++) buffer[off + i] = chunk[i]
+      off += i
     }
+    return buffer
+  }
+
+  _write (data, cb) {
     if (this._isObjectStream) {
-      if (typeof data === 'string') data = JSON.parse(data)
-      this.parseEvent(data)
+      this.process(data)
     } else {
       let o = 0
       let i = 1
       for (; i < data.length; i++) {
-        if (data[i] !== 10) continue // TODO: /\r\n|[\n\v\f\r\x85\u2028\u2029]/
+        if (data[i] !== 10 && data[i] !== '\n') continue // TODO: /\r\n|[\n\v\f\r\x85\u2028\u2029]/
         let slice = data.slice(o, i)
         o = i + 1
         i += 2
         if (this.carry) {
-          slice = Buffer.concat([this.carry, slice])
+          slice = this._concat([this.carry, slice])
           this.carry = null
         }
-        const ev = JSON.parse(slice.toString('utf8'))
-        this.parseEvent(ev)
+
+        const ev = JSON.parse(this._encode(slice))
+        this.process(ev)
       }
       if (o < i) this.carry = data.slice(o)
-      cb()
+      if (typeof cb === 'function') cb(null)
     }
   }
 }
 
 class TimelineAggregator extends Parser {
-  constructor () {
-    super()
+  constructor (opts) {
+    super(opts)
+    this._rnames = []
     this.reducers = {}
     this._lastTick = 0
     this._state = { iteration: 0 }
     this._cache = {}
   }
 
-  parseEvent (ev) {
+  process (ev) {
     if (ev.iteration > this._lastTick) {
       this.emit('snapshot', this._state, this._lastTick)
       this._state = { iteration: ev.iteration }
@@ -111,8 +145,8 @@ function InterconnectivityCounter (stats, ev, cache) {
 }
 
 class BasicTimeline extends TimelineAggregator {
-  constructor () {
-    super()
+  constructor (opts) {
+    super(opts)
     this.setReducer('stats', [SimulatorTickReducer, InterconnectivityCounter])
     this.setReducer('nodes', ReducePeers)
     this.setReducer('links', ReduceConnections)

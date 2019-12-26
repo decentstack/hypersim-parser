@@ -5,3 +5,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
+
+## [0.0.3] - 2019-12-26
+### Changed
+- Parser constructor now takes options: { isObjectStream: Boolean, process: function(data) }
+
+### Added
+- Browser support by alternatively accepting Uint8Arrays and chunks of strings besides the node Buffer support.
