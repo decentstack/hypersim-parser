@@ -22,7 +22,7 @@ const parser = new BasicTimeline()
 // Register a custom aggregator
 parser.pushReducer('version', (prev, { type, event, seq }) => {
   if (type !== 'custom' && event !== 'block') return 0
-  return (prev || 0) + 1
+  return seq
 })
 
 // 'snapshot' event is emitted once for each tick in the simulation's timeline
