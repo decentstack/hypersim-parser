@@ -116,18 +116,21 @@ class TimelineAggregator extends Parser {
 function evFilter (ev, type, ...evNames) {
   return ev.type === type && evNames.indexOf(ev.event) !== -1
 }
-function ReducePeers (peers, ev) {
+function ReducePeers (peers, ev, lut) {
   if (!evFilter(ev, 'peer', 'tick')) return peers || []
   if (!peers) peers = []
-  peers.push(omit(ev, ['type', 'event', 'sessionId', 'iteration', 'time']))
+  const peer = omit(ev, ['type', 'event', 'sessionId', 'iteration', 'time'])
+  peers.push(peer)
+  lut[peer.id] = peer
   return peers
 }
 
-function ReduceConnections (sockets, ev) {
+function ReduceConnections (sockets, ev, lut) {
   if (!evFilter(ev, 'socket', 'tick')) return sockets || []
   if (!sockets) sockets = []
   const sock = omit(ev, ['type', 'event', 'sessionId', 'iteration', 'time'])
   sockets.push(sock)
+  lut[sock.id] = sock
   return sockets
 }
 
@@ -148,7 +151,7 @@ class BasicTimeline extends TimelineAggregator {
   constructor (opts) {
     super(opts)
     this.setReducer('stats', [SimulatorTickReducer, InterconnectivityCounter])
-    this.setReducer('nodes', ReducePeers)
+    this.setReducer('peers', ReducePeers)
     this.setReducer('links', ReduceConnections)
   }
 }
