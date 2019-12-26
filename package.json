@@ -1,0 +1,39 @@
+{
+  "name": "hypersim-parser",
+  "version": "0.0.1",
+  "description": "Log parser and aggregator for hyper-simulator output",
+  "main": "index.js",
+  "files": [
+    "lib",
+    "bin",
+    "index.js"
+  ],
+  "scripts": {
+    "test": "tape test/*.js",
+    "debug": "node inspect $(npm bin)/tape test/*.js",
+    "lint": "standard",
+    "prepublishOnly": "npm test"
+  },
+  "dependencies": {
+    "lodash": "^4.17.15",
+    "streamx": "^2.5.0"
+  },
+  "devDependencies": {
+    "standard": "^14.3.1",
+    "tape": "^4.11.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/decentstack/hypersim-parser.git"
+  },
+  "keywords": [],
+  "author": {
+    "name": "Tony Ivanov",
+    "email": "telamohn@pm.me"
+  },
+  "license": "AGPL-3.0-or-later",
+  "bugs": {
+    "url": "https://github.com/decentstack/hypersim-parser/issues"
+  },
+  "homepage": "https://github.com/decentstack/hypersim-parser#readme"
+}
