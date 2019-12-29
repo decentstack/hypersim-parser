@@ -14,7 +14,7 @@ class Parser extends Writable {
   constructor (opts = {}) {
     super()
     if (opts.process) this.process = opts.process
-    this._isObjectStream = opts.isObjectStream
+    this._isObjectStream = opts.binary === false
     this._carry = null
   }
 
@@ -50,6 +50,7 @@ class Parser extends Writable {
   _write (data, cb) {
     if (this._isObjectStream) {
       this.process(data)
+      if (typeof cb === 'function') cb(null)
     } else {
       let o = 0
       let i = 1
@@ -80,6 +81,7 @@ class TimelineAggregator extends Parser {
     this._lastTick = 0
     this._state = { iteration: 0 }
     this._cache = {}
+    this._persistantCache = {}
   }
 
   process (ev) {
@@ -92,9 +94,10 @@ class TimelineAggregator extends Parser {
 
     for (const prop of this._rnames) {
       const cache = this._cache[prop] = this._cache[prop] || {}
+      const pcache = this._persistantCache[prop] = this._persistantCache[prop] || {}
       this._state[prop] = Array.isArray(this.reducers[prop])
-        ? this.reducers[prop].reduce((s, r) => r(s, ev, cache), this._state[prop])
-        : this.reducers[prop](this._state[prop], ev, cache)
+        ? this.reducers[prop].reduce((s, r) => r(s, ev, cache, pcache), this._state[prop])
+        : this.reducers[prop](this._state[prop], ev, cache, pcache)
     }
   }
 
@@ -135,7 +138,11 @@ function ReduceConnections (sockets, ev, lut) {
 }
 
 function SimulatorTickReducer (v, ev) {
-  if (!evFilter(ev, 'simulator', 'tick')) return v || {}
+  if (!evFilter(ev, 'simulator', 'tick')) {
+    return v || {
+      delta: 0, pending: 0, connections: 0, peers: 0, capacity: 0, rate: 0, load: 0, time: 0, iteration: 0, sessionId: 0, interconnection: 0
+    }
+  }
   return omit(ev, ['type', 'event'])
 }
 
@@ -147,12 +154,39 @@ function InterconnectivityCounter (stats, ev, cache) {
   return stats
 }
 
+function StateReducer (state, ev) {
+  if (!evFilter(ev, 'simulator', 'tick')) return state || -1
+  return ev.state
+}
+
+function ConfReducer (v, ev, cache, glob) {
+  if (!glob.conf) glob.conf = { swarm: null, sessionId: 0, speed: 0, interval: 0 }
+
+  if (evFilter(ev, 'simulator', 'init')) {
+    Object.assign(glob.conf, {
+      swarm: ev.swarm,
+      sessionId: ev.sessionId,
+      speed: -1,
+      interval: -1
+    })
+  } else if (evFilter(ev, 'simulator', 'state-running')) {
+    Object.assign(glob.conf, {
+      speed: ev.speed,
+      interval: ev.interval
+    })
+  }
+
+  return glob.conf
+}
+
 class BasicTimeline extends TimelineAggregator {
   constructor (opts) {
     super(opts)
     this.setReducer('stats', [SimulatorTickReducer, InterconnectivityCounter])
     this.setReducer('peers', ReducePeers)
     this.setReducer('links', ReduceConnections)
+    this.setReducer('state', StateReducer)
+    this.setReducer('conf', ConfReducer)
   }
 }
 

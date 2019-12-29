@@ -12,3 +12,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 - Browser support by alternatively accepting Uint8Arrays and chunks of strings besides the node Buffer support.
+
+## [0.0.4] - 2019-12-26
+### Changed
+- fixed bug when using object streams as input.
+- constructor opt for object streams renamed to new Parser({ binary: false })
+
+### Added
+- persistance cache as 4th argument to reducer.
