@@ -20,3 +20,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 - persistance cache as 4th argument to reducer.
+
+## [1.0.0] - 2019-12-31
+### Changed
+- fixed miscalculation bug
+- properly process last data when stream is finalized

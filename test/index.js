@@ -5,11 +5,12 @@ const fs = require('fs')
 const testChunks = [
   '{"iteration":0,"msg":"He',
   'llo"}\n{"iteration":1,"m',
-  'sg":"world"}\n{"iteration":2,"msg":"twice"}\n'
+  'sg":"world"}\n{"iteration":2,"msg":"twice"}',
+  '\n{"iteration":3,"msg":"fold"}'
 ]
 
 test('ndjson as strings', t => {
-  t.plan(6)
+  t.plan(8)
   const validate = ({ iteration, msg }) => {
     switch (iteration) {
       case 0:
@@ -21,15 +22,18 @@ test('ndjson as strings', t => {
       case 2:
         t.equal(msg, 'twice', 'pass' + iteration)
         break
+      case 3:
+        t.equal(msg, 'fold', 'pass' + iteration)
+        break
       default:
         t.fail('Unknown state: ' + iteration)
     }
   }
 
   const parser = new Parser({ process: validate })
-
+  parser.once('close', t.end)
   const feed = i => {
-    if (i >= testChunks.length) return t.end()
+    if (i >= testChunks.length) return parser.end()
     const chunk = testChunks[i]
     parser._write(chunk, err => {
       t.error(err)
@@ -40,7 +44,7 @@ test('ndjson as strings', t => {
 })
 
 test('ndjson as Buffers', t => {
-  t.plan(6)
+  t.plan(8)
   const validate = ({ iteration, msg }) => {
     switch (iteration) {
       case 0:
@@ -52,14 +56,18 @@ test('ndjson as Buffers', t => {
       case 2:
         t.equal(msg, 'twice', 'pass' + iteration)
         break
+      case 3:
+        t.equal(msg, 'fold', 'pass' + iteration)
+        break
       default:
         t.fail('Unknown state: ' + iteration)
     }
   }
 
   const parser = new Parser({ process: validate })
+  parser.once('close', t.end)
   const feed = i => {
-    if (i >= testChunks.length) return t.end()
+    if (i >= testChunks.length) return parser.end()
     const chunk = Buffer.from(testChunks[i])
     parser._write(chunk, err => {
       t.error(err)
@@ -70,7 +78,7 @@ test('ndjson as Buffers', t => {
 })
 
 test('ndjson as Uint8Arrays', t => {
-  t.plan(6)
+  t.plan(8)
   const validate = ({ iteration, msg }) => {
     switch (iteration) {
       case 0:
@@ -82,13 +90,17 @@ test('ndjson as Uint8Arrays', t => {
       case 2:
         t.equal(msg, 'twice', 'pass' + iteration)
         break
+      case 3:
+        t.equal(msg, 'fold', 'pass' + iteration)
+        break
       default:
         t.fail('Unknown state: ' + iteration)
     }
   }
   const parser = new Parser({ process: validate })
+  parser.once('close', t.end)
   const feed = i => {
-    if (i >= testChunks.length) return t.end()
+    if (i >= testChunks.length) return parser.end()
     const chunk = new Uint8Array(Buffer.from(testChunks[i]))
     parser._write(chunk, err => {
       t.error(err)

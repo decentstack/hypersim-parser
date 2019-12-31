@@ -16,6 +16,8 @@ class Parser extends Writable {
     if (opts.process) this.process = opts.process
     this._isObjectStream = opts.binary === false
     this._carry = null
+    // this._streamOffset = 0
+    this._linesProcessed = 0
   }
 
   process (data) {
@@ -50,26 +52,47 @@ class Parser extends Writable {
   _write (data, cb) {
     if (this._isObjectStream) {
       this.process(data)
+      this._linesProcessed++
       if (typeof cb === 'function') cb(null)
     } else {
       let o = 0
-      let i = 1
+      let i = 0
       for (; i < data.length; i++) {
-        if (data[i] !== 10 && data[i] !== '\n') continue // TODO: /\r\n|[\n\v\f\r\x85\u2028\u2029]/
+        if (data[i] !== 0xA && data[i] !== '\n') continue // TODO: /\r\n|[\n\v\f\r\x85\u2028\u2029]/
         let slice = data.slice(o, i)
         o = i + 1
         i += 2
-        if (this.carry) {
-          slice = this._concat([this.carry, slice])
-          this.carry = null
-        }
-
-        const ev = JSON.parse(this._encode(slice))
-        this.process(ev)
+        this._processSlice(slice, cb)
       }
       if (o < i) this.carry = data.slice(o)
+      // console.error(`LP: ${this._linesProcessed}, CS: ${data.length}, O: ${o}, i: ${i} Cr: ${this.carry ? this.carry.length : null}`)
       if (typeof cb === 'function') cb(null)
     }
+  }
+
+  _processSlice (slice, onError) {
+    if (this.carry) {
+      slice = this._concat([this.carry, slice])
+      this.carry = null
+    }
+    const str = this._encode(slice)
+    if (!str.length) return
+
+    try {
+      const ev = JSON.parse(str)
+      this.process(ev)
+      this._linesProcessed++
+    } catch (e) {
+      console.error(`Failed to parse JSON around line: ${this._linesProcessed}`, e.message, str)
+      onError(e)
+    }
+  }
+
+  _final (callback) {
+    if (!this.carry) return callback()
+    const data = this.carry
+    this.carry = null
+    this._processSlice(data, callback)
   }
 }
 
