@@ -1,6 +1,6 @@
 {
   "name": "hypersim-parser",
-  "version": "0.0.4",
+  "version": "1.0.0",
   "description": "Log parser and aggregator for hyper-simulator output",
   "main": "index.js",
   "files": [
